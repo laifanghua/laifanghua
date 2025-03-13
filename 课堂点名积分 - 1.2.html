@@ -1,0 +1,1299 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>智能课堂管理系统</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(45deg, #0b0b2a, #1a1a4a, #2a1a4a);
+            color: #fff;
+            font-family: 'Arial', sans-serif;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1600px;  /* 增加最大宽度 */
+            margin: 0 auto;     /* 整体居中 */
+            display: flex;      /* 使用flex布局 */
+            gap: 20px;         /* 设置间距 */
+        }
+
+        .main-content {
+            flex: 1;           /* 占据剩余空间 */
+            min-width: 0;      /* 防止flex子项溢出 */
+        }
+
+        /* 点名区域 */
+        .roll-call {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        #nameDisplay {
+            font-size: 3em;
+            color: #00f7ff;
+            text-shadow: 0 0 10px #00f7ff;
+            margin: 10px 0;
+            height: 60px;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            align-items: center;
+        }
+
+        button {
+            padding: 8px 20px;
+            font-size: 1.1em;
+            background: #1e90ff;
+            border: none;
+            border-radius: 25px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 0 15px #1e90ff;
+        }
+
+        button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 25px #1e90ff;
+        }
+
+        /* 小组容器 */
+        .groups-container {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 12px;
+            margin: 20px 0 0;  /* 只保留上边距 */
+            min-width: 600px;
+        }
+
+        .group {
+            min-width: 200px;
+            padding: 8px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid;
+            animation: borderGlow 3s infinite;
+            position: relative;
+        }
+
+        .member {
+            padding: 3px 8px;    /* 减小上下内边距 */
+            margin: 1px 0;       /* 减小上下外边距 */
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-size: 0.95em;
+        }
+
+        .member.selected {
+            background: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 0 10px #1e90ff;
+        }
+
+        .leader1 { 
+            color: #ffd700; 
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+
+        .leader2 {
+            color: #00ff00;
+            font-size: 1.05em;
+        }
+
+        .group-score {
+            display: inline-block;
+            font-size: 1em;
+            color: #ffd700;
+            margin-left: 10px;
+        }
+
+        .group-controls {
+            margin-top: 5px;
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        /* 排行榜 */
+        .ranking {
+            width: 300px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 15px;
+            height: fit-content;
+            position: sticky;  /* 改为sticky定位 */
+            top: 20px;
+            border: 2px solid;
+            animation: borderGlow 3s infinite;
+            flex-shrink: 0;   /* 防止排行榜被压缩 */
+        }
+
+        /* 修改柱状图样式 */
+        .rank-bar {
+            height: 30px;
+            background: linear-gradient(90deg, #1e90ff, #00bfff);
+            border-radius: 15px;
+            margin: 5px 0;
+            transition: all 0.3s;
+            position: relative;
+            box-shadow: 0 0 10px rgba(30, 144, 255, 0.5);
+            min-width: 100px;  /* 减小最小宽度 */
+        }
+
+        .rank-item {
+            margin: 15px 0;
+            position: relative;
+        }
+
+        .rank-label {
+            position: absolute;
+            left: 6px;         /* 稍微减小左边距 */
+            top: 50%;
+            transform: translateY(-50%);
+            color: white;
+            z-index: 1;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            display: flex;
+            align-items: center;
+            gap: 4px;          /* 减小间距 */
+            max-width: 110px;  /* 调整最大宽度 */
+        }
+
+        .rank-score {
+            position: absolute;
+            right: 6px;        /* 稍微减小右边距 */
+            top: 50%;
+            transform: translateY(-50%);
+            color: white;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            padding-left: 8px;  /* 减小内边距 */
+        }
+
+        .medal {
+            font-size: 1.2em;
+            filter: drop-shadow(0 0 2px rgba(255,255,255,0.5));
+        }
+
+        @keyframes borderGlow {
+            0%, 100% { border-color: #ff00ff; box-shadow: 0 0 10px #ff00ff; }
+            50% { border-color: #00ffff; box-shadow: 0 0 20px #00ffff; }
+        }
+
+        input[type="range"] {
+            width: 200px;
+            accent-color: #1e90ff;
+        }
+
+        /* 提示信息 */
+        .alert {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255,0,0,0.8);
+            padding: 10px 20px;
+            border-radius: 25px;
+            animation: fadeOut 2s forwards;
+            display: none;
+        }
+
+        @keyframes fadeOut {
+            0% { opacity: 1; }
+            100% { opacity: 0; display: none; }
+        }
+
+        /* 添加底部功能区样式 */
+        .bottom-controls {
+            position: fixed;
+            bottom: 10px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.5);  /* 添加半透明背景 */
+        }
+
+        .bottom-controls > div {
+            display: flex;
+            align-items: center;
+        }
+
+        .bottom-controls label {
+            color: #fff;
+            margin-right: 10px;
+            white-space: nowrap;
+        }
+
+        /* 添加文字溢出处理 */
+        .rank-label span {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* 修改按钮样式 */
+        .group-controls button {
+            padding: 4px 16px;      /* 减小按钮高度 */
+            font-size: 1em;         /* 减小字体大小 */
+        }
+
+        /* 添加小组头部样式 */
+        .group-header {
+            color: #ffd700;
+            text-align: center;
+            font-size: 1em;
+            margin-bottom: 5px;
+            padding: 3px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        /* 添加文件输入框样式 */
+        .file-input-container {
+            display: flex;
+            align-items: center;
+        }
+
+        .file-input-container input[type="file"] {
+            width: 80px;  /* 设置固定宽度 */
+            color: #fff;
+        }
+
+        .file-input-container input[type="file"]::-webkit-file-upload-button {
+            visibility: hidden;
+            width: 0;
+        }
+
+        .file-input-container input[type="file"]::before {
+            content: '选择文件';
+            display: inline-block;
+            background: #1e90ff;
+            border-radius: 25px;
+            padding: 4px 12px;
+            outline: none;
+            white-space: nowrap;
+            cursor: pointer;
+            font-size: 0.9em;
+            color: #fff;
+        }
+
+        .file-input-container input[type="file"]:hover::before {
+            background: #0066cc;
+        }
+
+        /* 添加班级管理按钮样式 */
+        .class-management {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .class-select {
+            padding: 4px 8px;
+            border-radius: 4px;
+            background: #1e90ff;
+            color: white;
+            border: none;
+        }
+
+        .class-select option {
+            background: #1a1a4a;
+            color: white;
+        }
+
+        /* 添加班级对话框样式 */
+        .dialog-input {
+            padding: 5px;
+            margin: 5px;
+            width: 200px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid #1e90ff;
+            border-radius: 4px;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="alert" id="alert">请先选择学生！</div>
+    <div class="container">
+        <div class="main-content">
+            <div class="roll-call">
+                <div id="nameDisplay">开始点名，Let's go!</div>
+                <div class="controls">
+                    <button onclick="startRoll()">开始点名</button>
+                    <button onclick="stopRoll()">停止</button>
+                    <input type="range" id="speed" min="1" max="10" value="5" 
+                           oninput="updateSpeed(this.value)">
+                    <button onclick="addScoreToAll()" style="background: #ff9900;">全班+1</button>
+                </div>
+            </div>
+
+            <div class="groups-container" id="groupsContainer"></div>
+        </div>
+        
+        <div class="ranking" id="ranking"></div>
+    </div>
+
+    <div class="bottom-controls">
+        <div class="class-management">
+            <select id="classSelect" class="class-select" onchange="switchClass()">
+                <option value="">选择班级</option>
+            </select>
+            <button onclick="showAddClassDialog()" style="background: #4CAF50;">新增班级</button>
+            <button onclick="showDeleteClassConfirm()" style="background: #ff4444;">删除班级</button>
+        </div>
+        <div class="file-input-container">
+            <label>名单导入：</label>
+            <input type="file" onchange="importData(event)" accept=".txt">
+        </div>
+        <div>
+            <label>小组数量：</label>
+            <input type="number" min="1" max="20" value="14" style="width: 60px" 
+                   onchange="updateGroupSettings()" id="groupCount">
+        </div>
+        <div>
+            <label>每组人数：</label>
+            <input type="number" min="1" max="10" value="4" style="width: 60px" 
+                   onchange="updateGroupSettings()" id="memberCount">
+        </div>
+        <div>
+            <label>每行小组数：</label>
+            <input type="number" min="1" max="10" value="5" style="width: 60px" 
+                   onchange="updateRowSettings()" id="groupsPerRow">
+        </div>
+        <div>
+            <label>排行榜数量：</label>
+            <input type="number" min="1" max="20" value="7" style="width: 60px" 
+                   onchange="updateRankingCount()" id="rankingCount">
+        </div>
+        <div>
+            <button onclick="clearAllScores()" style="background: #ff4444;">清空积分</button>
+        </div>
+        <div>
+            <button onclick="showPasswordDialog()" style="background: #4CAF50;">设置密码</button>
+            <button onclick="clearPassword()" style="background: #ff4444;">清除密码</button>
+        </div>
+    </div>
+
+    <!-- 添加密码设置对话框 -->
+    <div id="passwordDialog" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+        background: rgba(0,0,0,0.9); padding: 20px; border-radius: 10px; z-index: 1000; border: 2px solid #1e90ff;">
+        <h3 style="color: #fff; margin-bottom: 15px;">设置密码</h3>
+        <div style="margin-bottom: 10px;">
+            <input type="password" id="passwordInput" placeholder="请输入密码" 
+                   style="padding: 5px; margin: 5px; width: 200px;">
+        </div>
+        <div style="margin-bottom: 15px;">
+            <input type="password" id="confirmPasswordInput" placeholder="请再次输入密码" 
+                   style="padding: 5px; margin: 5px; width: 200px;">
+        </div>
+        <div style="margin-top: 15px;">
+            <button onclick="setPassword()" style="background: #4CAF50;">确定</button>
+            <button onclick="closePasswordDialog()" style="background: #666;">取消</button>
+        </div>
+    </div>
+
+    <!-- 添加密码验证对话框 -->
+    <div id="verifyDialog" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+        background: rgba(0,0,0,0.9); padding: 20px; border-radius: 10px; z-index: 1000; border: 2px solid #1e90ff;">
+        <h3 style="color: #fff; margin-bottom: 15px;">请输入密码</h3>
+        <input type="password" id="verifyInput" placeholder="请输入密码" 
+               style="padding: 5px; margin: 5px; width: 200px;">
+        <div style="margin-top: 15px;">
+            <button onclick="verifyPassword()" style="background: #4CAF50;">确定</button>
+        </div>
+    </div>
+
+    <!-- 添加清除密码验证对话框 -->
+    <div id="clearPasswordDialog" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+        background: rgba(0,0,0,0.9); padding: 20px; border-radius: 10px; z-index: 1000; border: 2px solid #ff4444;">
+        <h3 style="color: #fff; margin-bottom: 15px;">验证密码</h3>
+        <div style="margin-bottom: 10px;">
+            <input type="password" id="clearPasswordInput" placeholder="请输入当前密码" 
+                   style="padding: 5px; margin: 5px; width: 200px;">
+        </div>
+        <div style="margin-top: 15px;">
+            <button onclick="verifyClearPassword()" style="background: #ff4444;">确定</button>
+            <button onclick="closeClearPasswordDialog()" style="background: #666;">取消</button>
+        </div>
+    </div>
+
+    <!-- 添加班级对话框 -->
+    <div id="addClassDialog" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+        background: rgba(0,0,0,0.9); padding: 20px; border-radius: 10px; z-index: 1000; border: 2px solid #4CAF50;">
+        <h3 style="color: #fff; margin-bottom: 15px;">新增班级</h3>
+        <div style="margin-bottom: 15px;">
+            <input type="text" id="className" placeholder="请输入班级名称" class="dialog-input">
+        </div>
+        <div style="margin-top: 15px;">
+            <button onclick="addClass()" style="background: #4CAF50;">确定</button>
+            <button onclick="closeAddClassDialog()" style="background: #666;">取消</button>
+        </div>
+    </div>
+
+    <!-- 删除班级确认对话框 -->
+    <div id="deleteClassDialog" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+        background: rgba(0,0,0,0.9); padding: 20px; border-radius: 10px; z-index: 1000; border: 2px solid #ff4444;">
+        <h3 style="color: #fff; margin-bottom: 15px;">确认删除</h3>
+        <p style="color: #fff; margin-bottom: 15px;">确定要删除当前班级吗？此操作不可恢复！</p>
+        <div style="margin-top: 15px;">
+            <button onclick="deleteClass()" style="background: #ff4444;">确定删除</button>
+            <button onclick="closeDeleteClassDialog()" style="background: #666;">取消</button>
+        </div>
+    </div>
+
+    <script>
+        // 学生名单
+        let students = [
+            "孙云筝","夏正萱","马泽权","刘子铭","尹晴曦","单艺菡","陈俊泽","李欣泽",
+            "杨政颢","包禄宽","赵凤歌","王欣瑶","王显赫","高峰","赵凤舞","孟嘉奕",
+            "郝书淇","祁晨兴","张孝宸","王睿堂","赵洛汐","官鸿飞","张俊硕","张依诺",
+            "徐铭宇","孙慧然","郑宸翊","王佳烨","王睿萱","乔诺言","甄泽瑞","曹庆柯",
+            "王梓丞","陈鹏宇","尹浠诺","柴梓航","刘雨溪","朱茗予","魏梓曦","孙若兮",
+            "高吉喆","魏靖华","魏辰轩","李君艺","耿若溪","孙淑溢","王怡豪","华浩博",
+            "马诗博","孙一扬","张涵铱","陈语芊惠","杨欣怡","孟宇鸣","黄柯依","王书怡"
+        ];
+
+        // 系统状态
+        let groups = [];
+        let intervalId;
+        let currentSpeed = 5;
+        let scores = {};  // 先初始化为空对象
+        let selectedStudent = null;
+
+        // 添加密码相关变量和函数
+        let isVerified = false;
+
+        // 添加班级管理相关变量
+        let currentClass = '';
+        let classData = {};  // 存储所有班级的数据
+
+        // 显示密码设置对话框
+        function showPasswordDialog() {
+            document.getElementById('passwordDialog').style.display = 'block';
+        }
+
+        // 关闭密码设置对话框
+        function closePasswordDialog() {
+            document.getElementById('passwordDialog').style.display = 'none';
+            document.getElementById('passwordInput').value = '';
+            document.getElementById('confirmPasswordInput').value = '';
+        }
+
+        // 设置密码
+        function setPassword() {
+            const password = document.getElementById('passwordInput').value.trim();
+            const confirmPassword = document.getElementById('confirmPasswordInput').value.trim();
+            
+            if (!password || !confirmPassword) {
+                showAlert('请输入密码！');
+                return;
+            }
+            
+            if (password !== confirmPassword) {
+                showAlert('两次输入的密码不一致！');
+                document.getElementById('confirmPasswordInput').value = ''; // 清空确认密码
+                return;
+            }
+            
+            try {
+                localStorage.setItem('pagePassword', password);
+                showAlert('密码设置成功！');
+                closePasswordDialog();
+            } catch (e) {
+                showAlert('密码设置失败，请重试！');
+            }
+        }
+
+        // 验证密码
+        function verifyPassword() {
+            const input = document.getElementById('verifyInput').value;
+            const savedPassword = localStorage.getItem('pagePassword');
+            
+            if (!input) {
+                showAlert('请输入密码！');
+                return;
+            }
+            
+            if (input === savedPassword) {
+                isVerified = true;
+                document.getElementById('verifyDialog').style.display = 'none';
+                document.getElementById('verifyInput').value = '';
+                enablePage();
+                showAlert('密码验证成功！');
+            } else {
+                showAlert('密码错误，请重试！');
+                document.getElementById('verifyInput').value = '';  // 清空错误输入
+            }
+        }
+
+        // 禁用页面功能
+        function disablePage() {
+            document.querySelectorAll('button, input').forEach(elem => {
+                // 排除验证对话框内的元素
+                if (!elem.closest('#verifyDialog')) {
+                    elem.disabled = true;
+                }
+            });
+        }
+
+        // 启用页面功能
+        function enablePage() {
+            document.querySelectorAll('button, input').forEach(elem => {
+                elem.disabled = false;
+            });
+        }
+
+        // 修改页面加载时的初始化
+        window.onload = function() {
+            const savedPassword = localStorage.getItem('pagePassword');
+            if (savedPassword) {
+                isVerified = false;
+                disablePage();
+                document.getElementById('verifyDialog').style.display = 'block';
+            } else {
+                isVerified = true;
+                enablePage();
+            }
+            
+            loadSavedData();
+            initGroups();
+        }
+
+        // 添加回车键支持
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('verifyInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    verifyPassword();
+                }
+            });
+            
+            // 添加清除密码验证的回车支持
+            document.getElementById('clearPasswordInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    verifyClearPassword();
+                }
+            });
+        });
+
+        // 修改所有功能函数，添加密码验证检查
+        function checkVerification(callback) {
+            if (!isVerified && localStorage.getItem('pagePassword')) {
+                showAlert('请先验证密码！');
+                document.getElementById('verifyDialog').style.display = 'block';
+                return false;
+            }
+            return true;
+        }
+
+        // 修改初始化函数，添加行设置初始化
+        function initGroups() {
+            // 使用当前设置的值进行初始化
+            const groupCount = parseInt(document.getElementById('groupCount').value);
+            const memberCount = parseInt(document.getElementById('memberCount').value);
+            
+            groups = [];
+            const totalNeeded = groupCount * memberCount;
+            
+            let adjustedStudents = [...students];
+            while (adjustedStudents.length < totalNeeded) {
+                adjustedStudents.push('');
+            }
+            
+            for(let i = 0; i < groupCount; i++) {
+                groups.push({
+                    members: adjustedStudents.slice(i * memberCount, (i + 1) * memberCount)
+                });
+            }
+            
+            renderGroups();
+            updateRanking();
+            
+            // 初始化每行小组数设置
+            const groupsPerRow = parseInt(document.getElementById('groupsPerRow').value);
+            document.querySelector('.groups-container').style.gridTemplateColumns = 
+                `repeat(${groupsPerRow}, 1fr)`;
+        }
+
+        // 修改渲染小组的函数
+        function renderGroups() {
+            let container = document.getElementById('groupsContainer');
+            container.innerHTML = groups.map((group, index) => {
+                const total = group.members.reduce((sum, m) => sum + (scores[m] || 0), 0);
+                const circleNumbers = "⓪①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳";
+                return `
+                <div class="group">
+                    <div class="group-header">
+                        <span style="font-size:0.9em">${circleNumbers[index+1]}</span>
+                        组总分：${total}
+                    </div>
+                    ${group.members.map((m,i) => `
+                        <div class="member ${i===0?'leader1':i===1?'leader2':''} ${m === selectedStudent ? 'selected' : ''}" 
+                             onclick="selectStudent('${m}')">
+                            ${m} 
+                            <span style="float:right">${scores[m] || 0}分</span>
+                        </div>
+                    `).join('')}
+                    <div class="group-controls">
+                        <button onclick="addScoreToGroup(${index})">全+1</button>
+                        <button onclick="changeScore(-1, ${index})">-1</button>
+                        <button onclick="changeScore(1, ${index})">+1</button>
+                    </div>
+                </div>
+                `;
+            }).join('');
+        }
+
+        // 选择学生
+        function selectStudent(student) {
+            selectedStudent = student;
+            renderGroups();
+        }
+
+        // 修改分数
+        function changeScore(delta, groupIndex) {
+            if (!checkVerification()) return;
+            if (selectedStudent && selectedStudent.startsWith('group_')) {
+                // 全组加分
+                const groupNum = parseInt(selectedStudent.split('_')[1]);
+                groups[groupNum].members.forEach(member => {
+                    if (member) {  // 只给有效成员加分
+                        if (!scores[member]) scores[member] = 0;
+                        scores[member] = Math.max(0, scores[member] + delta);
+                    }
+                });
+            } else {
+                // 单人加分
+                if (!selectedStudent || !groups[groupIndex].members.includes(selectedStudent)) {
+                    const firstMember = groups[groupIndex].members[0];
+                    if (firstMember) {
+                        selectedStudent = firstMember;
+                    } else {
+                        showAlert('该小组没有学生！');
+                        return;
+                    }
+                }
+                if(!scores[selectedStudent]) scores[selectedStudent] = 0;
+                scores[selectedStudent] = Math.max(0, scores[selectedStudent] + delta);
+            }
+            
+            try {
+                localStorage.setItem('scores', JSON.stringify(scores));
+            } catch (e) {
+                console.error('分数保存失败:', e);
+                showAlert('分数保存失败，请检查浏览器存储设置');
+            }
+            
+            renderGroups();
+            updateRanking();
+        }
+
+        // 添加全组加分函数
+        function addScoreToGroup(groupIndex) {
+            if (!checkVerification()) return;
+            groups[groupIndex].members.forEach(member => {
+                if (member) {  // 只给有效成员加分
+                    if (!scores[member]) scores[member] = 0;
+                    scores[member] = scores[member] + 1;
+                }
+            });
+            
+            try {
+                localStorage.setItem('scores', JSON.stringify(scores));
+            } catch (e) {
+                console.error('分数保存失败:', e);
+                showAlert('分数保存失败，请检查浏览器存储设置');
+            }
+            
+            renderGroups();
+            updateRanking();
+        }
+
+        // 显示提示
+        function showAlert(msg) {
+            const alert = document.getElementById('alert');
+            alert.textContent = msg;
+            alert.style.display = 'block';
+            setTimeout(() => alert.style.display = 'none', 2000);
+        }
+
+        // 更新排行榜
+        function updateRanking() {
+            // 获取设置的排行榜显示数量
+            const rankingCount = parseInt(document.getElementById('rankingCount').value);
+            
+            // 准备数据
+            let groupScores = groups.map((g, index) => ({
+                score: g.members.reduce((sum, m) => sum + (scores[m] || 0), 0),
+                index: index
+            })).filter(g => g.score > 0).sort((a, b) => b.score - a.score);
+
+            let personalScores = Object.entries(scores)
+                .filter(([name, score]) => score > 0)
+                .map(([name, score]) => ({ name, score }))
+                .sort((a, b) => b.score - a.score);
+
+            const groupMaxScore = groupScores[0]?.score || 0;
+            const personalMaxScore = personalScores[0]?.score || 0;
+
+            document.getElementById('ranking').innerHTML = `
+                <h3 style="text-align:center; margin-bottom:15px">
+                    🏆 积分排行榜
+                </h3>
+                <div style="margin-bottom:20px">
+                    <h4 style="margin:10px 0; color:#1e90ff">小组排名</h4>
+                    ${groupScores.length > 0 ? groupScores.slice(0, rankingCount).map((g,i) => {
+                        const percentage = groupMaxScore > 0 ? (g.score / groupMaxScore * 100) : 0;
+                        const medals = ['🥇','🥈','🥉'];
+                        return `
+                            <div class="rank-item">
+                                <div class="rank-bar" style="width: ${Math.max(20, percentage)}%">
+                                    <div class="rank-label">
+                                        ${i < 3 ? `<span class="medal">${medals[i]}</span>` : ''}
+                                        <span>第${g.index+1}组</span>
+                                    </div>
+                                    <div class="rank-score">${g.score}分</div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('') : '<div style="text-align:center; margin-top:10px; color:#888;">暂无积分数据</div>'}
+                </div>
+                <div>
+                    <h4 style="margin:10px 0; color:#1e90ff">个人排名</h4>
+                    ${personalScores.length > 0 ? personalScores.slice(0, rankingCount).map((p,i) => {
+                        const percentage = personalMaxScore > 0 ? (p.score / personalMaxScore * 100) : 0;
+                        const medals = ['🥇','🥈','🥉'];
+                        return `
+                            <div class="rank-item">
+                                <div class="rank-bar" style="width: ${Math.max(20, percentage)}%">
+                                    <div class="rank-label">
+                                        ${i < 3 ? `<span class="medal">${medals[i]}</span>` : ''}
+                                        <span>${p.name}</span>
+                                    </div>
+                                    <div class="rank-score">${p.score}分</div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('') : '<div style="text-align:center; margin-top:10px; color:#888;">暂无积分数据</div>'}
+                </div>
+            `;
+        }
+
+        // 修改点名停止函数
+        function stopRoll() {
+            if (!checkVerification()) return;
+            clearInterval(intervalId);
+            const currentName = document.getElementById('nameDisplay').textContent;
+            
+            // 确保名字存在且不是初始提示文本
+            if (currentName && currentName !== '开始点名，Let\'s go!' && students.includes(currentName)) {
+                // 查找学生所在的组号
+                let groupIndex = -1;
+                for (let i = 0; i < groups.length; i++) {
+                    if (groups[i].members.includes(currentName)) {
+                        groupIndex = i + 1;
+                        break;
+                    }
+                }
+                
+                // 更新显示
+                document.getElementById('nameDisplay').innerHTML = `
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 20px; transform: translateX(150px);">
+                        <span style="color: #ffd700; font-size: 0.5em;">第${groupIndex}组</span>
+                        <span style="font-size: 1.0em;">${currentName}</span>
+                        <span style="color: #ffd700; font-size: 0.8em;">${scores[currentName] || 0}分</span>
+                        <div style="margin-left: 20px;">
+                            <button onclick="changeScoreForRolled(-1)" style="font-size: 0.5em; padding: 4px 16px; margin: 0 5px;">-1</button>
+                            <button onclick="changeScoreForRolled(1)" style="font-size: 0.5em; padding: 4px 16px; margin: 0 5px;">+1</button>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // 修改点名学生加减分函数，保持相同的样式
+        function changeScoreForRolled(delta) {
+            const displayContent = document.getElementById('nameDisplay').querySelector('span:nth-child(2)').textContent;
+            const currentName = displayContent.trim();
+            
+            if (students.includes(currentName)) {
+                if (!scores[currentName]) scores[currentName] = 0;
+                scores[currentName] = Math.max(0, scores[currentName] + delta);
+                
+                try {
+                    localStorage.setItem('scores', JSON.stringify(scores));
+                } catch (e) {
+                    console.error('分数保存失败:', e);
+                    showAlert('分数保存失败，请检查浏览器存储设置');
+                }
+                
+                renderGroups();
+                updateRanking();
+                
+                // 查找学生所在的组号
+                let groupIndex = -1;
+                groups.forEach((group, index) => {
+                    if (group.members.includes(currentName)) {
+                        groupIndex = index + 1;
+                    }
+                });
+                
+                // 更新点名显示区域，保持右移样式
+                document.getElementById('nameDisplay').innerHTML = `
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 20px; transform: translateX(100px);">
+                        <span style="color: #ffd700; font-size: 0.5em;">第${groupIndex}组</span>
+                        <span style="font-size: 1.0em;">${currentName}</span>
+                        <span style="color: #ffd700; font-size: 0.8em;">${scores[currentName]}分</span>
+                        <div style="margin-left: 20px;">
+                            <button onclick="changeScoreForRolled(-1)" style="font-size: 0.5em; padding: 4px 16px; margin: 0 5px;">-1</button>
+                            <button onclick="changeScoreForRolled(1)" style="font-size: 0.5em; padding: 4px 16px; margin: 0 5px;">+1</button>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // 修改开始点名函数，清除加减分按钮
+        function startRoll() {
+            if (!checkVerification()) return;
+            clearInterval(intervalId);
+            intervalId = setInterval(() => {
+                const randomIndex = Math.floor(Math.random() * students.length);
+                document.getElementById('nameDisplay').textContent = students[randomIndex];
+            }, 1000/currentSpeed);
+        }
+
+        function updateSpeed(value) {
+            currentSpeed = value;
+            if(intervalId) {
+                stopRoll();
+                startRoll();
+            }
+        }
+
+        // 修改文件导入函数
+        function importData(e) {
+            if (!checkVerification()) return;
+            
+            if (!currentClass) {
+                showAlert('请先选择或创建班级！');
+                return;
+            }
+
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const newStudents = e.target.result.split('\n')
+                    .map(s => s.trim())
+                    .filter(x => x);
+                
+                students = newStudents;
+                scores = {};  // 重置分数
+                
+                // 保存到当前班级
+                saveCurrentClassData();
+                saveAllClassData();
+                
+                initGroups();
+                showAlert('名单导入成功！');
+            };
+            reader.readAsText(file);
+        }
+
+        // 设置定期自动保存（每30秒）
+        setInterval(autoSave, 30000);
+
+        // 保留页面关闭时的保存
+        window.addEventListener('beforeunload', autoSave);
+
+        // 添加页面可见性变化时的保存
+        document.addEventListener('visibilitychange', function() {
+            if (document.visibilityState === 'hidden') {
+                autoSave();
+            }
+        });
+
+        // 修改clearAllScores函数，只清空分数不清空名单
+        function clearAllScores() {
+            if (!checkVerification()) return;
+            if (confirm('确定要清空所有学生的积分吗？')) {
+                scores = {};
+                localStorage.setItem('scores', JSON.stringify(scores));
+                renderGroups();
+                updateRanking();
+                showAlert('所有积分已清空');
+            }
+        }
+
+        // 添加全班加分函数
+        function addScoreToAll() {
+            if (!checkVerification()) return;
+            students.forEach(student => {
+                if (!scores[student]) scores[student] = 0;
+                scores[student] = scores[student] + 1;
+            });
+            
+            try {
+                localStorage.setItem('scores', JSON.stringify(scores));
+            } catch (e) {
+                console.error('分数保存失败:', e);
+                showAlert('分数保存失败，请检查浏览器存储设置');
+            }
+            
+            renderGroups();
+            updateRanking();
+        }
+
+        // 添加排行榜数量设置功能
+        function updateRankingCount() {
+            const count = parseInt(document.getElementById('rankingCount').value);
+            
+            // 验证输入
+            if (count < 1) {
+                showAlert('排行榜数量必须大于0！');
+                return;
+            }
+            
+            // 保存设置
+            saveSettings();
+            
+            // 更新排行榜显示
+            updateRanking();
+        }
+
+        // 修改updateGroupSettings函数
+        function updateGroupSettings() {
+            const groupCount = parseInt(document.getElementById('groupCount').value);
+            const memberCount = parseInt(document.getElementById('memberCount').value);
+            
+            // 验证输入
+            if (groupCount < 1 || memberCount < 1) {
+                showAlert('设置值必须大于0！');
+                return;
+            }
+            
+            // 保存设置
+            saveSettings();
+            
+            // 重新分组
+            groups = [];
+            const totalNeeded = groupCount * memberCount;
+            
+            // 如果学生不够，用空字符串填充
+            let adjustedStudents = [...students];
+            while (adjustedStudents.length < totalNeeded) {
+                adjustedStudents.push('');
+            }
+            
+            // 按设置重新分组
+            for(let i = 0; i < groupCount; i++) {
+                groups.push({
+                    members: adjustedStudents.slice(i * memberCount, (i + 1) * memberCount)
+                });
+            }
+            
+            renderGroups();
+            updateRanking();
+        }
+
+        // 修改updateRowSettings函数
+        function updateRowSettings() {
+            const groupsPerRow = parseInt(document.getElementById('groupsPerRow').value);
+            
+            // 验证输入
+            if (groupsPerRow < 1) {
+                showAlert('每行小组数必须大于0！');
+                return;
+            }
+            
+            // 保存设置
+            saveSettings();
+            
+            // 更新CSS Grid布局
+            document.querySelector('.groups-container').style.gridTemplateColumns = 
+                `repeat(${groupsPerRow}, 1fr)`;
+        }
+
+        // 修改loadSavedData函数，添加学生名单的加载
+        function loadSavedData() {
+            // 加载班级数据
+            const savedClassData = localStorage.getItem('classData');
+            if (savedClassData) {
+                classData = JSON.parse(savedClassData);
+                updateClassSelect();
+            }
+
+            // 加载保存的分数
+            const savedScores = localStorage.getItem('scores');
+            if (savedScores) {
+                scores = JSON.parse(savedScores);
+            }
+
+            // 加载保存的学生名单
+            const savedStudents = localStorage.getItem('students');
+            if (savedStudents) {
+                students = JSON.parse(savedStudents);
+            }
+
+            // 加载保存的设置
+            const savedSettings = localStorage.getItem('settings');
+            if (savedSettings) {
+                const settings = JSON.parse(savedSettings);
+                document.getElementById('groupCount').value = settings.groupCount || 14;
+                document.getElementById('memberCount').value = settings.memberCount || 4;
+                document.getElementById('groupsPerRow').value = settings.groupsPerRow || 5;
+                document.getElementById('rankingCount').value = settings.rankingCount || 6;
+            }
+        }
+
+        // 修改autoSave函数，添加学生名单的保存
+        function autoSave() {
+            try {
+                // 保存当前班级数据
+                if (currentClass) {
+                    saveCurrentClassData();
+                }
+                // 保存所有班级数据
+                saveAllClassData();
+            } catch (e) {
+                console.error('自动保存失败:', e);
+            }
+        }
+
+        // 修改saveSettings函数
+        function saveSettings() {
+            try {
+                const settings = {
+                    groupCount: document.getElementById('groupCount').value,
+                    memberCount: document.getElementById('memberCount').value,
+                    groupsPerRow: document.getElementById('groupsPerRow').value,
+                    rankingCount: document.getElementById('rankingCount').value
+                };
+                localStorage.setItem('settings', JSON.stringify(settings));
+            } catch (e) {
+                console.error('设置保存失败:', e);
+            }
+        }
+
+        // 添加清除密码相关函数
+        function showClearPasswordDialog() {
+            document.getElementById('clearPasswordDialog').style.display = 'block';
+        }
+
+        function closeClearPasswordDialog() {
+            document.getElementById('clearPasswordDialog').style.display = 'none';
+            document.getElementById('clearPasswordInput').value = '';
+        }
+
+        function verifyClearPassword() {
+            const input = document.getElementById('clearPasswordInput').value;
+            const savedPassword = localStorage.getItem('pagePassword');
+            
+            if (!input) {
+                showAlert('请输入密码！');
+                return;
+            }
+            
+            if (input === savedPassword) {
+                localStorage.removeItem('pagePassword');
+                isVerified = true;
+                enablePage();
+                closeClearPasswordDialog();
+                showAlert('密码已清除');
+            } else {
+                showAlert('密码错误，请重试！');
+                document.getElementById('clearPasswordInput').value = '';
+            }
+        }
+
+        // 修改clearPassword函数
+        function clearPassword() {
+            const savedPassword = localStorage.getItem('pagePassword');
+            if (savedPassword) {
+                showClearPasswordDialog();
+            } else {
+                showAlert('当前未设置密码！');
+            }
+        }
+
+        // 显示新增班级对话框
+        function showAddClassDialog() {
+            if (!checkVerification()) return;
+            document.getElementById('addClassDialog').style.display = 'block';
+        }
+
+        // 关闭新增班级对话框
+        function closeAddClassDialog() {
+            document.getElementById('addClassDialog').style.display = 'none';
+            document.getElementById('className').value = '';
+        }
+
+        // 新增班级
+        function addClass() {
+            const className = document.getElementById('className').value.trim();
+            if (!className) {
+                showAlert('请输入班级名称！');
+                return;
+            }
+
+            if (classData[className]) {
+                showAlert('该班级已存在！');
+                return;
+            }
+
+            // 保存当前班级数据
+            if (currentClass) {
+                saveCurrentClassData();
+            }
+
+            // 创建新班级数据
+            classData[className] = {
+                students: [],
+                scores: {},
+                settings: {
+                    groupCount: document.getElementById('groupCount').value,
+                    memberCount: document.getElementById('memberCount').value,
+                    groupsPerRow: document.getElementById('groupsPerRow').value,
+                    rankingCount: document.getElementById('rankingCount').value
+                }
+            };
+
+            // 更新班级选择下拉框
+            updateClassSelect();
+            
+            // 切换到新班级
+            currentClass = className;
+            document.getElementById('classSelect').value = className;
+
+            // 清空当前数据
+            students = [];
+            scores = {};
+            initGroups();
+
+            // 保存所有班级数据
+            saveAllClassData();
+            closeAddClassDialog();
+            showAlert('班级创建成功！');
+        }
+
+        // 显示删除班级确认对话框
+        function showDeleteClassConfirm() {
+            if (!checkVerification()) return;
+            if (!currentClass) {
+                showAlert('请先选择班级！');
+                return;
+            }
+            document.getElementById('deleteClassDialog').style.display = 'block';
+        }
+
+        // 关闭删除班级确认对话框
+        function closeDeleteClassDialog() {
+            document.getElementById('deleteClassDialog').style.display = 'none';
+        }
+
+        // 删除当前班级
+        function deleteClass() {
+            if (!currentClass) return;
+
+            delete classData[currentClass];
+            saveAllClassData();
+
+            // 更新班级选择下拉框
+            updateClassSelect();
+
+            // 清空当前数据
+            currentClass = '';
+            students = [];
+            scores = {};
+            document.getElementById('classSelect').value = '';
+            initGroups();
+
+            closeDeleteClassDialog();
+            showAlert('班级已删除！');
+        }
+
+        // 切换班级
+        function switchClass() {
+            const selectedClass = document.getElementById('classSelect').value;
+            
+            // 保存当前班级数据
+            if (currentClass) {
+                saveCurrentClassData();
+            }
+
+            // 加载选中班级的数据
+            if (selectedClass) {
+                currentClass = selectedClass;
+                const data = classData[selectedClass];
+                students = [...data.students];
+                scores = {...data.scores};
+                
+                // 加载班级设置
+                if (data.settings) {
+                    document.getElementById('groupCount').value = data.settings.groupCount;
+                    document.getElementById('memberCount').value = data.settings.memberCount;
+                    document.getElementById('groupsPerRow').value = data.settings.groupsPerRow;
+                    document.getElementById('rankingCount').value = data.settings.rankingCount;
+                }
+            } else {
+                currentClass = '';
+                students = [];
+                scores = {};
+            }
+
+            initGroups();
+        }
+
+        // 更新班级选择下拉框
+        function updateClassSelect() {
+            const select = document.getElementById('classSelect');
+            select.innerHTML = '<option value="">选择班级</option>';
+            Object.keys(classData).forEach(className => {
+                const option = document.createElement('option');
+                option.value = className;
+                option.textContent = className;
+                select.appendChild(option);
+            });
+        }
+
+        // 保存当前班级数据
+        function saveCurrentClassData() {
+            if (!currentClass) return;
+            
+            classData[currentClass] = {
+                students: [...students],
+                scores: {...scores},
+                settings: {
+                    groupCount: document.getElementById('groupCount').value,
+                    memberCount: document.getElementById('memberCount').value,
+                    groupsPerRow: document.getElementById('groupsPerRow').value,
+                    rankingCount: document.getElementById('rankingCount').value
+                }
+            };
+        }
+
+        // 保存所有班级数据
+        function saveAllClassData() {
+            try {
+                localStorage.setItem('classData', JSON.stringify(classData));
+            } catch (e) {
+                console.error('班级数据保存失败:', e);
+                showAlert('班级数据保存失败！');
+            }
+        }
+    </script>
+</body>
+</html>
